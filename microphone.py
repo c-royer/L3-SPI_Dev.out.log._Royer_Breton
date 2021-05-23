@@ -9,28 +9,17 @@ import numpy as np
 import sounddevice as sd
 from scipy.fftpack import fft, ifft
 import color
-from matplotlib.widgets import CheckButtons
 
 plt.close('all')
 
-
-def int_or_str(text):
-    """Helper function for argument parsing."""
-    try:
-        return int(text)
-    except ValueError:
-        return text
-
-
-
-channels = [1]  # input channels to plot (default: the first)
-device = None  # input device (numeric ID or substring)
-window = 200  # visible time slot (default: %(default)s ms)
-interval = 30  # minimum time between plot updates (default: %(default)s ms)
+channels = [1]  # chois du channel à plot (default: the first)
+device = None  # périphérique d'entrée (ID numérique ou script)
+window = 200  # durée visible (default: %(default)s ms)
+interval = 30  # interval minimum entre 2 update (default: %(default)s ms)
 blocksize = 1  # block size (in samples)
-samplerate = None  # sampling rate of audio device
+samplerate = None  # fréquence d'échantillonage du périphérique audio
 downsample = 10  # display every Nth sample (default: %(default)s)
-downsample_dft = 1  # isplay every Nth sample (default: %(default)s)
+downsample_dft = 1  # display every Nth sample (default: %(default)s)
 
 if any(c < 1 for c in channels):
     print('argument CHANNEL: must be >= 1')
@@ -38,11 +27,9 @@ if any(c < 1 for c in channels):
 mapping = [c - 1 for c in channels]  # Channel numbers start with 1
 q = queue.Queue()
 q_dft = queue.Queue()
-q_FRF = queue.Queue()
-
 
 def audio_callback(indata, frames, time, status):
-    """This is called (from a separate thread) for each audio block."""
+    """Fonction, nécessaire au stream, appellé pour chaque bloc audio"""
     if status:
         print(status, file=sys.stderr)
     # Fancy indexing with mapping creates a (necessary!) copy:
@@ -51,7 +38,7 @@ def audio_callback(indata, frames, time, status):
 
 
 def update_plot(frame):
-    """This is called by matplotlib for each plot update.
+    """Fonction permettant la mise à jour de l'affichage matplotlib de la source microphonique
     Typically, audio callbacks happen more frequently than plot updates,
     therefore the queue tends to contain multiple blocks of audio data.
     """
@@ -66,12 +53,11 @@ def update_plot(frame):
         plotdata[-shift:, :] = data
     for column, line in enumerate(lines):
         line.set_ydata(plotdata[:, column])
-
     return lines
 
 
 def update_dft(frame):
-    """This is called by matplotlib for each plot update.
+    """Fonction permettant la mise à jour de l'affichage matplotlib de la DFT
     Typically, audio callbacks happen more frequently than plot updates,
     therefore the queue tends to contain multiple blocks of audio data.
     """
@@ -97,9 +83,6 @@ try:
 
     length = int(window * samplerate / (1000 * downsample))
     plotdata = np.zeros((length, len(channels)))
-
-    length_FRF = 512
-    plotFRF = np.zeros((length_FRF, len(channels)))
 
     # sensitivity = float(input('Sensibilité = '))
 
@@ -148,8 +131,8 @@ try:
     anim = FuncAnimation(fig, update_dft, interval=interval, blit=True)
 
     with stream:
-
         plt.show()
+        
 except Exception as e:
     print(type(e).__name__ + ': ' + str(e))
 
